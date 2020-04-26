@@ -111,7 +111,7 @@ print(xTrain.shape)
 
 yTrain = []
 for i in range(need_num, training_num):
-    yTrain.append(yTrainDataset[i-need_num])
+    yTrain.append(yTrainDataset[i])
 yTrain = np.array(yTrain)
 #print(yTrain)
 print(yTrain.shape)

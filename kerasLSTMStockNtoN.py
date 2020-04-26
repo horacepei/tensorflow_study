@@ -26,9 +26,8 @@ def get_dataset():
     #将数据价转换为整数
     dataset['开盘价'] = dataset['开盘价'].astype(int)
     dataset['收盘价'] = dataset['收盘价'].astype(int)
-    dataset['成交量'] = dataset['成交量'].astype(int)
     # 列名选取行，剔除不需要开头的行
-    dataframeDataset = dataset.loc[1:, ['开盘价', '收盘价', '成交量']]
+    dataframeDataset = dataset.loc[1:, ['开盘价', '收盘价']]
     print(dataframeDataset.shape)
     # 反转数据
     dataframeDatasetReverse = dataframeDataset.reindex(index = dataframeDataset.index[::-1])
@@ -63,13 +62,12 @@ batch_size = 10
 ###############################################################################
 #数据处理
 ndarrayDataset = get_dataset()
+#print(ndarrayDataset)
 ###############################################################################
 # 构建训练集
 x_train = ndarrayDataset[0:training_num]
 #print(x_train)
-y_train = []
-for i in range(1, training_num+1):
-    y_train.append(ndarrayDataset[i,0])
+y_train =  ndarrayDataset[1:training_num+1]
 #print(y_train)
 # 转换dt数据
 x_train, y_train = np.array(x_train), np.array(y_train)
@@ -86,12 +84,12 @@ print(x_train.shape)
 #print(x_train.shape)
 # outcome scaling:
 sc_Y = MinMaxScaler(feature_range=(0, 1))
-y_train = sc_Y.fit_transform(y_train.reshape(-1,1))
+y_train = sc_Y.fit_transform(y_train)
 y_train = np.array(y_train)
 print(y_train.shape)
 
 ###############################################################################
-#构建LSTM需要的数据
+print('=======================数据转换=======================')
 xTrain = []
 for i in range(need_num, training_num):
     xTrain.append(x_train[i-need_num:i])
@@ -114,6 +112,10 @@ y_train = yTrain
 #构建网络，使用的是序贯模型
 model = Sequential()
 #return_sequences=True返回的是全部输出，LSTM做第一层时，需要指定输入shape
+# step 1次取多少行数据
+print(x_train.shape[1])
+# 特征值数量 
+print(x_train.shape[2])
 model.add(LSTM(units=128, return_sequences=True, 
                input_shape=[x_train.shape[1],
                             x_train.shape[2]]))
@@ -122,7 +124,7 @@ model.add(BatchNormalization())
 model.add(LSTM(units=128))
 model.add(BatchNormalization())
  
-model.add(Dense(units=1))
+model.add(Dense(units=x_train.shape[2]))
 #进行配置
 model.compile(optimizer='adam',
               loss='mean_squared_error',
@@ -134,9 +136,7 @@ model.fit(x=x_train, y=y_train, epochs=epoch, batch_size=batch_size)
 #进行测试数据的处理
 #将训练集的数据向后移动，增加上需要预测的数据
 x_test = ndarrayDataset[test_num:training_num+test_num]
-y_test = []
-for i in range(test_num+1, training_num+test_num+1):
-    y_test.append(ndarrayDataset[i,0])
+y_test = ndarrayDataset[test_num+1:training_num+test_num+1]
 #print(y_train)
 # 转换dt数据
 x_test, y_test = np.array(x_test), np.array(y_test)
@@ -182,11 +182,13 @@ y_predictes = sc_Y_T.inverse_transform(X=y_predictes)
 print(y_predictes)
 ###############################################################################
 #绘制数据图表，红色是真实数据，蓝色是预测数据
-plt.plot(y_test, color='red', label='Real Stock Price')
-plt.plot(y_predictes, color='blue', label='Predicted Stock Price')
-plt.title(label='ShangHai Stock Price Prediction')
+plt.plot(y_test[:,0], color='red', label='Real open')
+plt.plot(y_test[:,1], color='yellow',label='Real close')
+plt.plot(y_predictes[:,0], color='blue', label='Predicted open')
+plt.plot(y_predictes[:,1], color='green', label='Predicted close')
+plt.title(label='ShangHai open/close Prediction')
 plt.xlabel(xlabel='Time')
-plt.ylabel(ylabel='ShangHai Stock Price')
+plt.ylabel(ylabel='ShangHai open/close')
 plt.legend()
 plt.show()
 
